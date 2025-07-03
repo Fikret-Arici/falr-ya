@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Moon, Sun, Coffee, Hand as HandPalm, Car as Cards, Stars, Upload, Calendar, ArrowLeft, Sparkles, Loader2, RefreshCw } from 'lucide-react';
+import { Moon, Sun, Coffee, Hand as HandPalm, Car as Cards, Stars, Upload, Calendar, ArrowLeft, Sparkles, Loader2, RefreshCw, Zap, BookOpen, Heart, Crown, Gem } from 'lucide-react';
+import { dreamService } from './src/services/dreamService';
 
-type FortuneType = 'coffee' | 'palm' | 'tarot' | 'horoscope' | 'daily' | null;
+type FortuneType = 'coffee' | 'palm' | 'tarot' | 'horoscope' | 'daily' | 'dream' | 'numerology' | 'crystal' | 'love' | null;
 
 type TarotCard = {
   id: number;
@@ -69,6 +70,15 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [fortuneResult, setFortuneResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Yeni state'ler
+  const [dreamText, setDreamText] = useState<string>('');
+  const [dreamInterpretation, setDreamInterpretation] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>('');
+  const [birthDate, setBirthDate] = useState<string>('');
+  const [numerologyNumber, setNumerologyNumber] = useState<number | null>(null);
+  const [crystalType, setCrystalType] = useState<string>('');
+  const [loveQuestion, setLoveQuestion] = useState<string>('');
 
   useEffect(() => {
     const lastViewedDate = localStorage.getItem('lastDailyFortuneDate');
@@ -115,11 +125,15 @@ export default function App() {
   };
 
   const fortuneOptions = [
-    { id: 'daily', icon: Sparkles, label: 'Günlük Falın', description: 'Her gün yeni bir fal' },
-    { id: 'coffee', icon: Coffee, label: 'Kahve Falı', description: 'Fincanındaki sırları keşfet' },
-    { id: 'palm', icon: HandPalm, label: 'El Falı', description: 'Elindeki çizgileri oku' },
-    { id: 'tarot', icon: Cards, label: 'Tarot', description: 'Kartların rehberliğinde' },
-    { id: 'horoscope', icon: Stars, label: 'Burç Yorumları', description: 'Burcuna özel yorumlar' },
+    { id: 'daily', icon: Sparkles, label: 'Günlük Falın', description: 'Her gün yeni bir fal', color: 'from-purple-600 to-pink-600' },
+    { id: 'coffee', icon: Coffee, label: 'Kahve Falı', description: 'Fincanındaki sırları keşfet', color: 'from-amber-600 to-orange-600' },
+    { id: 'palm', icon: HandPalm, label: 'El Falı', description: 'Elindeki çizgileri oku', color: 'from-green-600 to-teal-600' },
+    { id: 'tarot', icon: Cards, label: 'Tarot', description: 'Kartların rehberliğinde', color: 'from-indigo-600 to-purple-600' },
+    { id: 'horoscope', icon: Stars, label: 'Burç Yorumları', description: 'Burcuna özel yorumlar', color: 'from-blue-600 to-indigo-600' },
+    { id: 'dream', icon: Zap, label: 'Rüya Yorumu', description: 'Rüyalarının anlamını öğren', color: 'from-cyan-600 to-blue-600' },
+    { id: 'numerology', icon: Crown, label: 'Numeroloji', description: 'Sayıların gizli anlamı', color: 'from-yellow-600 to-orange-600' },
+    { id: 'crystal', icon: Gem, label: 'Kristal Falı', description: 'Kristallerin enerjisi', color: 'from-pink-600 to-rose-600' },
+    { id: 'love', icon: Heart, label: 'Aşk Falı', description: 'Aşk hayatının sırları', color: 'from-red-600 to-pink-600' },
   ];
 
   const tarotCards: TarotCard[] = [
@@ -289,6 +303,89 @@ export default function App() {
     };
     
     return horoscopes[type][sign] || 'Burç yorumunuz hazırlanıyor...';
+  };
+
+  // Rüya yorumlama fonksiyonu
+  const interpretDream = async () => {
+    if (!dreamText.trim()) {
+      setError('Lütfen rüyanızı anlatın.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setDreamInterpretation(null);
+
+    try {
+      const interpretation = await dreamService.interpretDream(dreamText);
+      setDreamInterpretation(interpretation);
+      
+      // Geçmişe kaydet
+      const dreamHistory = JSON.parse(localStorage.getItem('dreamHistory') || '[]');
+      dreamHistory.unshift({
+        dream: dreamText,
+        interpretation: interpretation,
+        date: new Date().toISOString()
+      });
+      localStorage.setItem('dreamHistory', JSON.stringify(dreamHistory.slice(0, 10))); // Son 10 rüya
+    } catch (error) {
+      console.error('Dream interpretation failed:', error);
+      // Fallback kullan
+      const fallbackInterpretation = dreamService.getFallbackInterpretation(dreamText);
+      setDreamInterpretation(fallbackInterpretation);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Numeroloji hesaplama
+  const calculateNumerology = () => {
+    if (!userName.trim() || !birthDate) {
+      setError('Lütfen adınızı ve doğum tarihinizi girin.');
+      return;
+    }
+
+    const nameNumber = userName.split('').reduce((sum, char) => {
+      const charCode = char.toLowerCase().charCodeAt(0) - 96;
+      return sum + (charCode >= 1 && charCode <= 26 ? charCode : 0);
+    }, 0);
+
+    const birthNumber = birthDate.split('-').reduce((sum, part) => sum + parseInt(part), 0);
+    
+    const totalNumber = (nameNumber + birthNumber) % 9 || 9;
+    setNumerologyNumber(totalNumber);
+  };
+
+  // Kristal falı
+  const getCrystalFortune = () => {
+    const crystals = [
+      'Ametist - Ruhsal gelişim ve korunma',
+      'Kuvars - Enerji temizliği ve güç',
+      'Ay Taşı - Sezgiler ve kadın enerjisi',
+      'Gül Kuvars - Aşk ve uyum',
+      'Kaplan Gözü - Korunma ve şans',
+      'Lapis Lazuli - Bilgelik ve iletişim',
+      'Malakit - Dönüşüm ve büyüme',
+      'Obsidyen - Korunma ve güç'
+    ];
+    
+    return crystals[Math.floor(Math.random() * crystals.length)];
+  };
+
+  // Aşk falı
+  const getLoveFortune = () => {
+    const loveFortunes = [
+      'Aşk hayatınızda büyük bir değişim yaklaşıyor. Yeni bir aşk kapınızı çalacak.',
+      'Mevcut ilişkinizde derinleşme zamanı. Daha fazla yakınlık kurun.',
+      'Kendinizi sevmeyi öğrenme zamanı. Önce kendinizle barışın.',
+      'Geçmiş aşk acılarınızı bırakma zamanı. Yeni başlangıçlar sizi bekliyor.',
+      'Aşk hayatınızda sabırlı olun. Doğru kişi yakında gelecek.',
+      'İlişkinizde iletişimi güçlendirin. Daha fazla konuşun ve dinleyin.',
+      'Aşk hayatınızda risk alma zamanı. Cesur olun.',
+      'Aşk hayatınızda denge kurma zamanı. Hem aşk hem kariyer mümkün.'
+    ];
+    
+    return loveFortunes[Math.floor(Math.random() * loveFortunes.length)];
   };
 
   const renderContent = () => {
@@ -510,6 +607,216 @@ export default function App() {
           </div>
         );
 
+      case 'dream':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <h2 className="text-3xl font-bold text-purple-200 text-center mb-8">
+              🌙 Rüya Yorumu
+            </h2>
+            <div className="max-w-2xl mx-auto space-y-6">
+              <div className="space-y-4">
+                <label className="block text-purple-200 text-lg font-medium">
+                  Rüyanızı detaylı bir şekilde anlatın:
+                </label>
+                <textarea
+                  value={dreamText}
+                  onChange={(e) => setDreamText(e.target.value)}
+                  placeholder="Örnek: Rüyamda deniz kenarında yürüyordum, güneş batıyordu ve kuşlar uçuyordu..."
+                  className="w-full h-32 px-4 py-3 rounded-xl bg-purple-900/50 border border-purple-500/30 text-purple-100 focus:outline-none focus:border-purple-400 resize-none"
+                />
+              </div>
+              
+              {error && (
+                <div className="p-4 bg-red-900/30 border border-red-500/30 rounded-lg">
+                  <p className="text-red-200">{error}</p>
+                </div>
+              )}
+              
+              {!dreamInterpretation && !isLoading && (
+                <button
+                  onClick={interpretDream}
+                  className="w-full p-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white rounded-xl transition-all duration-300 font-medium text-lg"
+                >
+                  <Zap className="w-6 h-6 inline mr-2" />
+                  Rüyamı Yorumla
+                </button>
+              )}
+              
+              {isLoading && (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mr-3" />
+                  <span className="text-purple-200 text-lg">Rüyanız analiz ediliyor...</span>
+                </div>
+              )}
+              
+              {dreamInterpretation && (
+                <div className="space-y-4">
+                  <div className="p-6 rounded-xl bg-gradient-to-br from-cyan-900/30 to-blue-900/30 border border-cyan-500/30 animate-slide-up">
+                    <h3 className="text-xl font-semibold text-cyan-200 mb-3">🌙 Rüya Yorumunuz</h3>
+                    <p className="text-purple-100 text-lg leading-relaxed">
+                      {dreamInterpretation}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setDreamText('');
+                      setDreamInterpretation(null);
+                    }}
+                    className="w-full p-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                  >
+                    Yeni Rüya Yorumla
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'numerology':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <h2 className="text-3xl font-bold text-purple-200 text-center mb-8">
+              👑 Numeroloji
+            </h2>
+            <div className="max-w-md mx-auto space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-purple-200 mb-2">Adınız</label>
+                  <input
+                    type="text"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    placeholder="Adınızı girin"
+                    className="w-full px-4 py-3 rounded-lg bg-purple-900/50 border border-purple-500/30 text-purple-100 focus:outline-none focus:border-purple-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-purple-200 mb-2">Doğum Tarihiniz</label>
+                  <input
+                    type="date"
+                    value={birthDate}
+                    onChange={(e) => setBirthDate(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg bg-purple-900/50 border border-purple-500/30 text-purple-100 focus:outline-none focus:border-purple-400"
+                  />
+                </div>
+              </div>
+              
+              {!numerologyNumber && (
+                <button
+                  onClick={calculateNumerology}
+                  className="w-full p-4 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white rounded-xl transition-all duration-300 font-medium text-lg"
+                >
+                  <Crown className="w-6 h-6 inline mr-2" />
+                  Sayımı Hesapla
+                </button>
+              )}
+              
+              {numerologyNumber && (
+                <div className="p-6 rounded-xl bg-gradient-to-br from-yellow-900/30 to-orange-900/30 border border-yellow-500/30 animate-slide-up">
+                  <h3 className="text-2xl font-bold text-yellow-200 text-center mb-4">
+                    Yaşam Sayınız: {numerologyNumber}
+                  </h3>
+                  <p className="text-purple-100 text-center">
+                    {numerologyNumber === 1 && 'Liderlik ve bağımsızlık. Yaratıcı ve kararlı bir kişiliğiniz var.'}
+                    {numerologyNumber === 2 && 'Uyum ve işbirliği. Duyarlı ve diplomatik bir yapınız var.'}
+                    {numerologyNumber === 3 && 'Yaratıcılık ve iletişim. Sosyal ve neşeli bir kişiliğiniz var.'}
+                    {numerologyNumber === 4 && 'Güvenilirlik ve düzen. Pratik ve sabırlı bir yapınız var.'}
+                    {numerologyNumber === 5 && 'Özgürlük ve macera. Değişken ve meraklı bir kişiliğiniz var.'}
+                    {numerologyNumber === 6 && 'Sorumluluk ve sevgi. Aile odaklı ve yardımsever bir yapınız var.'}
+                    {numerologyNumber === 7 && 'Spiritüellik ve analiz. Derin düşünen ve sezgisel bir kişiliğiniz var.'}
+                    {numerologyNumber === 8 && 'Güç ve başarı. Ambitiyöz ve organize bir yapınız var.'}
+                    {numerologyNumber === 9 && 'Evrensel sevgi ve tamamlama. İdealist ve cömert bir kişiliğiniz var.'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'crystal':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <h2 className="text-3xl font-bold text-purple-200 text-center mb-8">
+              💎 Kristal Falı
+            </h2>
+            <div className="max-w-md mx-auto space-y-6">
+              <div className="text-center">
+                <p className="text-purple-200 text-lg mb-6">
+                  Kristallerin enerjisi size hangi mesajı veriyor?
+                </p>
+                <button
+                  onClick={() => setCrystalType(getCrystalFortune())}
+                  className="w-full p-6 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white rounded-xl transition-all duration-300 font-medium text-lg"
+                >
+                  <Gem className="w-8 h-8 inline mr-3" />
+                  Kristalimi Seç
+                </button>
+              </div>
+              
+              {crystalType && (
+                <div className="p-6 rounded-xl bg-gradient-to-br from-pink-900/30 to-rose-900/30 border border-pink-500/30 animate-slide-up">
+                  <h3 className="text-xl font-semibold text-pink-200 mb-3">💎 Sizin Kristaliniz</h3>
+                  <p className="text-purple-100 text-lg leading-relaxed text-center">
+                    {crystalType}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'love':
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <h2 className="text-3xl font-bold text-purple-200 text-center mb-8">
+              💕 Aşk Falı
+            </h2>
+            <div className="max-w-md mx-auto space-y-6">
+              <div className="space-y-4">
+                <label className="block text-purple-200 text-lg font-medium">
+                  Aşk hayatınızla ilgili bir soru sorun:
+                </label>
+                <textarea
+                  value={loveQuestion}
+                  onChange={(e) => setLoveQuestion(e.target.value)}
+                  placeholder="Örnek: Aşk hayatımda ne zaman mutlu olacağım?"
+                  className="w-full h-24 px-4 py-3 rounded-xl bg-purple-900/50 border border-purple-500/30 text-purple-100 focus:outline-none focus:border-purple-400 resize-none"
+                />
+              </div>
+              
+              {!fortuneResult && (
+                <button
+                  onClick={() => setFortuneResult(getLoveFortune())}
+                  className="w-full p-4 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white rounded-xl transition-all duration-300 font-medium text-lg"
+                >
+                  <Heart className="w-6 h-6 inline mr-2" />
+                  Aşk Falımı Oku
+                </button>
+              )}
+              
+              {fortuneResult && (
+                <div className="space-y-4">
+                  <div className="p-6 rounded-xl bg-gradient-to-br from-red-900/30 to-pink-900/30 border border-red-500/30 animate-slide-up">
+                    <h3 className="text-xl font-semibold text-red-200 mb-3">💕 Aşk Falınız</h3>
+                    <p className="text-purple-100 text-lg leading-relaxed">
+                      {fortuneResult}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setLoveQuestion('');
+                      setFortuneResult(null);
+                    }}
+                    className="w-full p-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                  >
+                    Yeni Aşk Falı
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -547,7 +854,7 @@ export default function App() {
         </div>
 
         {!selectedOption ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {fortuneOptions.map((option) => {
               const Icon = option.icon;
               return (
@@ -565,7 +872,9 @@ export default function App() {
                 >
                   <div className="absolute inset-0 rounded-xl bg-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="relative flex flex-col items-center space-y-4">
-                    <Icon className="w-12 h-12 text-purple-300" />
+                    <div className={`p-4 rounded-full bg-gradient-to-r ${option.color}`}>
+                      <Icon className="w-8 h-8 text-white" />
+                    </div>
                     <span className="text-lg font-medium text-purple-100">
                       {option.label}
                     </span>
